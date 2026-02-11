@@ -2,7 +2,6 @@ import { pool } from "../config/database";
 import { randomInt, randomItem } from "../utils/random";
 import { MarketplaceEvent } from "../types/events";
 
-const CATEGORIES = ["electronics", "shoes", "clothing", "accessories"];
 const CANCEL_REASONS = [
   "Changed mind",
   "Found better price",

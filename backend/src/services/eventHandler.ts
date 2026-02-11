@@ -23,7 +23,7 @@ async function updateRedisCounters(event: MarketplaceEvent) {
       await redisClient.incr("cart:last_minute");
       break;
 
-    case "purchase_completed":
+    case "purchase_completed": {
       // Add to today's revenue
       const amount = event.totalAmount.toString();
       await redisClient.incrByFloat("revenue:today", parseFloat(amount));
@@ -34,6 +34,7 @@ async function updateRedisCounters(event: MarketplaceEvent) {
         [event.totalAmount, event.itemsCount, "completed"],
       );
       break;
+    }
 
     case "order_cancelled":
       // Update order status

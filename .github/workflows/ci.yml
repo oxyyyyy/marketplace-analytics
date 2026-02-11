@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      # FRONTEND
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: bun install
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: bun run lint
+
+      - name: Build frontend
+        working-directory: frontend
+        run: bun run build
+
+      # BACKEND
+      - name: Install backend dependencies
+        working-directory: backend
+        run: bun install
+
+      - name: Build backend
+        working-directory: backend
+        run: bun run build

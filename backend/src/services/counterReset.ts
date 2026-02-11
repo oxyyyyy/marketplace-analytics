@@ -1,5 +1,4 @@
 import { redisClient } from "../config/redis";
-import { pool } from "../config/database";
 
 // Reset minute counters every minute
 export function startCounterReset() {

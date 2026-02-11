@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import type { MarketplaceEvent } from "../types/metrics";
 
 // Format number with commas (1234567 -> 1,234,567)
 export const formatNumber = (num: number): string => {
@@ -39,14 +40,16 @@ export const getRelativeTime = (dateString: string): string => {
 };
 
 // Get event display text
-export const getEventDisplayText = (payload: any): string => {
+export const getEventDisplayText = (payload: MarketplaceEvent): string => {
   switch (payload.type) {
     case "product_viewed":
       return `User #${payload.userId} viewed ${payload.category} product`;
     case "add_to_cart":
       return `User #${payload.userId} added item ($${payload.price})`;
     case "purchase_completed":
-      return `Order #${payload.orderId} completed - ${formatCurrency(payload.totalAmount)}`;
+      return `Order #${payload.orderId} completed - ${formatCurrency(
+        payload.totalAmount ?? 0,
+      )}`;
     case "order_cancelled":
       return `Order #${payload.orderId} cancelled: ${payload.reason}`;
     default:

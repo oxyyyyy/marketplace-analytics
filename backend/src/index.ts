@@ -6,7 +6,7 @@ import { Server } from "socket.io";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
 import { pool } from "./config/database";
-import { redisClient, connectRedis } from "./config/redis";
+import { connectRedis } from "./config/redis";
 import { runMigration } from "./db/migrate";
 import { initRedisCounters } from "./db/initRedis";
 import { startEventSimulator } from "./services/eventSimulator";

@@ -8,7 +8,12 @@ export type EventType =
 // Base event interface
 export interface MarketplaceEvent {
   type: EventType;
-  [key: string]: unknown;
+  userId?: number;
+  category?: string;
+  price?: number;
+  orderId?: number;
+  totalAmount?: number;
+  reason?: string;
 }
 
 // Event with metadata from API

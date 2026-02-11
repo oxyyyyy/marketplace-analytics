@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import { randomDelay, randomItem } from "../utils/random";
+import { randomDelay } from "../utils/random";
 import {
   generateProductView,
   generateAddToCart,
