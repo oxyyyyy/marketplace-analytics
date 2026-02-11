@@ -6,16 +6,30 @@ export async function runMigration() {
   try {
     console.log("🔄 Running database migration...");
 
-    // Read SQL file
-    const schemaPath = path.join(__dirname, "schema.sql");
-    const schema = fs.readFileSync(schemaPath, "utf-8");
+    // Try multiple paths (local vs production)
+    const possiblePaths = [
+      path.join(__dirname, "schema.sql"),
+      path.join(__dirname, "../db/schema.sql"),
+      path.join(process.cwd(), "src/db/schema.sql"),
+    ];
 
-    // Execute SQL
+    let schema: string | null = null;
+
+    for (const schemaPath of possiblePaths) {
+      if (fs.existsSync(schemaPath)) {
+        schema = fs.readFileSync(schemaPath, "utf-8");
+        console.log(`📄 Found schema at: ${schemaPath}`);
+        break;
+      }
+    }
+
+    if (!schema) {
+      throw new Error("schema.sql not found");
+    }
+
     await pool.query(schema);
-
     console.log("✅ Database migration completed!");
 
-    // Verify products were added
     const result = await pool.query("SELECT COUNT(*) FROM products");
     console.log(`📦 Products in database: ${result.rows[0].count}`);
   } catch (error) {
@@ -24,12 +38,8 @@ export async function runMigration() {
   }
 }
 
-// Run directly if called as main module
 if (require.main === module) {
   runMigration()
     .then(() => process.exit(0))
-    .catch((error) => {
-      console.error("Migration error:", error);
-      process.exit(1);
-    });
+    .catch(() => process.exit(1));
 }

@@ -1,110 +1,45 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import { createServer } from "http";
-import { Server } from "socket.io";
-import swaggerUi from "swagger-ui-express";
-import { swaggerSpec } from "./config/swagger";
 import { pool } from "./config/database";
-import { connectRedis } from "./config/redis";
-import { runMigration } from "./db/migrate";
-import { initRedisCounters } from "./db/initRedis";
-import { startEventSimulator } from "./services/eventSimulator";
-import {
-  startCounterReset,
-  startDailyReset,
-  startOnlineUsersSimulator,
-} from "./services/counterReset";
-import metricsRouter from "./routes/metrics";
+import * as fs from "fs";
+import * as path from "path";
 
-dotenv.config();
-
-const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    methods: ["GET", "POST"],
-  },
-});
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Swagger documentation
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-// Routes
-app.use("/api/metrics", metricsRouter);
-
-/**
- * @swagger
- * /health:
- *   get:
- *     summary: Health check endpoint
- *     description: Returns server status and current timestamp to verify the API is running
- *     tags: [Health]
- *     responses:
- *       200:
- *         description: Server is healthy
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: ok
- *                   description: Server health status
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                   example: "2026-02-07T14:30:00.000Z"
- *                   description: Current server time
- */
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// WebSocket connection
-io.on("connection", (socket) => {
-  console.log("🔌 Client connected:", socket.id);
-
-  socket.on("disconnect", () => {
-    console.log("🔌 Client disconnected:", socket.id);
-  });
-});
-
-// Start server
-const PORT = process.env.PORT || 3001;
-
-async function startServer() {
+export async function runMigration() {
   try {
-    await connectRedis();
-    await pool.query("SELECT NOW()");
-    console.log("✅ PostgreSQL connected");
-    await runMigration();
-    await initRedisCounters();
+    console.log("🔄 Running database migration...");
 
-    startEventSimulator(io);
-    startCounterReset();
-    startDailyReset();
-    startOnlineUsersSimulator();
+    // Try multiple paths (local vs production)
+    const possiblePaths = [
+      path.join(__dirname, "schema.sql"),
+      path.join(__dirname, "../db/schema.sql"),
+      path.join(process.cwd(), "src/db/schema.sql"),
+    ];
 
-    httpServer.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-      console.log(`🔌 WebSocket ready on ws://localhost:${PORT}`);
-      console.log(`📊 API available at http://localhost:${PORT}/api/metrics`);
-      console.log(`📚 API Docs available at http://localhost:${PORT}/api-docs`);
-    });
+    let schema: string | null = null;
+
+    for (const schemaPath of possiblePaths) {
+      if (fs.existsSync(schemaPath)) {
+        schema = fs.readFileSync(schemaPath, "utf-8");
+        console.log(`📄 Found schema at: ${schemaPath}`);
+        break;
+      }
+    }
+
+    if (!schema) {
+      throw new Error("schema.sql not found");
+    }
+
+    await pool.query(schema);
+    console.log("✅ Database migration completed!");
+
+    const result = await pool.query("SELECT COUNT(*) FROM products");
+    console.log(`📦 Products in database: ${result.rows[0].count}`);
   } catch (error) {
-    console.error("❌ Failed to start server:", error);
-    process.exit(1);
+    console.error("❌ Migration failed:", error);
+    throw error;
   }
 }
 
-startServer();
+if (require.main === module) {
+  runMigration()
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
+}
